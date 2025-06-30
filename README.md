@@ -40,7 +40,7 @@ curl -X POST http://localhost:3000/books \
   -d '{"title": "book title", "author": "first and last name"}'
 ```
 
-### Delete Book
+#### Delete Book
 
 ```
 curl -X DELETE http://localhost:3000/books/<book-id>
