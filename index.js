@@ -1,10 +1,30 @@
+// load books from json files
+const fs = require("fs");
+const path = require("path");
+
+const filePath = path.join(__dirname, "books.json");
+
+let books = [];
+
+if (fs.existsSync(filePath)) {
+  const data = fs.readFileSync(filePath, "utf8");
+  try {
+    books = JSON.parse(data);
+  } catch (error) {
+    console.error("Error parsing books.json", error);
+  }
+}
+
+const saveBooks = () => {
+  fs.writeFileSync(filePath, JSON.stringify(books, null, 2), "utf-8");
+};
+
+// REST API
 const express = require("express");
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
-
-let books = [];
 
 app.get("/", (req, res) => {
   res.send("📚 Book API is running. Use /books");
@@ -29,6 +49,7 @@ app.post("/books", (req, res) => {
 
   books.push(newBook);
   res.status(201).json(newBook);
+  saveBooks();
 });
 
 app.put("/books/:id", (req, res) => {
@@ -48,6 +69,7 @@ app.put("/books/:id", (req, res) => {
   }
 
   res.status(200).json(books[index]);
+  saveBooks();
 });
 
 app.delete("/books/:id", (req, res) => {
@@ -60,6 +82,7 @@ app.delete("/books/:id", (req, res) => {
 
   const deleted = books.splice(index, 1);
   res.json(deleted);
+  saveBooks();
 });
 
 app.listen(PORT, () => {
