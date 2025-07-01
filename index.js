@@ -1,5 +1,6 @@
 // load books from json files
 const fs = require("fs");
+const fsp = require("fs").promises;
 const path = require("path");
 
 const filePath = path.join(__dirname, "books.json");
@@ -15,8 +16,16 @@ if (fs.existsSync(filePath)) {
   }
 }
 
-const saveBooks = () => {
-  fs.writeFileSync(filePath, JSON.stringify(books, null, 2), "utf-8");
+const saveBooks = async () => {
+  try {
+    await fsp.promises.writeFile(
+      filePath,
+      JSON.stringify(books, null, 2),
+      "utf-8",
+    );
+  } catch (error) {
+    console.error("Error saving books:", error);
+  }
 };
 
 // REST API
@@ -34,7 +43,7 @@ app.get("/books", (req, res) => {
   res.json(books);
 });
 
-app.post("/books", (req, res) => {
+app.post("/books", async (req, res) => {
   const { title, author } = req.body;
   if (!title || !author) {
     const error = "Title and the author are required.";
@@ -62,10 +71,10 @@ app.post("/books", (req, res) => {
 
   books.push(newBook);
   res.status(201).json(newBook);
-  saveBooks();
+  await saveBooks();
 });
 
-app.put("/books/:id", (req, res) => {
+app.put("/books/:id", async (req, res) => {
   const { id } = req.params;
   const { title, author } = req.body;
   const index = books.findIndex((book) => id === book.id);
@@ -82,10 +91,10 @@ app.put("/books/:id", (req, res) => {
   }
 
   res.status(200).json(books[index]);
-  saveBooks();
+  await saveBooks();
 });
 
-app.delete("/books/:id", (req, res) => {
+app.delete("/books/:id", async (req, res) => {
   const { id } = req.params;
   const index = books.findIndex((book) => id === book.id);
   if (index === -1) {
@@ -95,7 +104,7 @@ app.delete("/books/:id", (req, res) => {
 
   const deleted = books.splice(index, 1);
   res.json(deleted);
-  saveBooks();
+  await saveBooks();
 });
 
 app.listen(PORT, () => {
