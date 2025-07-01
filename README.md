@@ -45,3 +45,11 @@ curl -X POST http://localhost:3000/books \
 ```
 curl -X DELETE http://localhost:3000/books/<book-id>
 ```
+
+### Edit Book
+
+```
+curl -X PUT http://localhost:3000/books/<book-id>
+  -H "Content-Type: application/json" \
+  -d '{"title": "updated title", "author": "updated name"}'
+```

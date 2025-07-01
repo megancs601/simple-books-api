@@ -31,6 +31,25 @@ app.post("/books", (req, res) => {
   res.status(201).json(newBook);
 });
 
+app.put("/books/:id", (req, res) => {
+  const { id } = req.params;
+  const { title, author } = req.body;
+  const index = books.findIndex((book) => id === book.id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Book not found." });
+  }
+
+  if (title !== undefined) {
+    books[index].title = title;
+  }
+
+  if (author !== undefined) {
+    books[index].author = author;
+  }
+
+  res.status(200).json(books[index]);
+});
+
 app.delete("/books/:id", (req, res) => {
   const { id } = req.params;
   const index = books.findIndex((book) => id === book.id);
