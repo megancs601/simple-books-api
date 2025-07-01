@@ -16,6 +16,15 @@ if (fs.existsSync(filePath)) {
   }
 }
 
+let timeout;
+
+const debounce = (fn, delay = 500) => {
+  clearTimeout(timeout);
+  timeout = setTimeout(() => {
+    fn();
+  }, delay);
+};
+
 const saveBooks = async () => {
   try {
     await fsp.promises.writeFile(
@@ -71,7 +80,7 @@ app.post("/books", async (req, res) => {
 
   books.push(newBook);
   res.status(201).json(newBook);
-  await saveBooks();
+  debounce(saveBooks);
 });
 
 app.put("/books/:id", async (req, res) => {
@@ -91,7 +100,7 @@ app.put("/books/:id", async (req, res) => {
   }
 
   res.status(200).json(books[index]);
-  await saveBooks();
+  debounce(saveBooks);
 });
 
 app.delete("/books/:id", async (req, res) => {
@@ -104,7 +113,7 @@ app.delete("/books/:id", async (req, res) => {
 
   const deleted = books.splice(index, 1);
   res.json(deleted);
-  await saveBooks();
+  debounce(saveBooks);
 });
 
 app.listen(PORT, () => {
