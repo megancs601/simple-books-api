@@ -41,6 +41,19 @@ app.post("/books", (req, res) => {
     return res.status(400).json({ error });
   }
 
+  //check for duplicates first
+  const isDuplicate = books.some(
+    (book) =>
+      book.title.toLowerCase() === title.toLowerCase() &&
+      book.author.toLowerCase() === author.toLowerCase(),
+  );
+
+  if (isDuplicate) {
+    return res
+      .status(409)
+      .json({ error: "This book already exists in the library" });
+  }
+
   const newBook = {
     id: Date.now().toString(),
     title,
