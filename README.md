@@ -46,7 +46,7 @@ curl -X POST http://localhost:3000/books \
 curl -X DELETE http://localhost:3000/books/<book-id>
 ```
 
-### Edit Book
+#### Edit Book
 
 ```
 curl -X PUT http://localhost:3000/books/<book-id>
