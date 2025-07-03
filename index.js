@@ -86,20 +86,42 @@ app.post("/books", async (req, res) => {
 app.put("/books/:id", async (req, res) => {
   const { id } = req.params;
   const { title, author } = req.body;
-  const index = books.findIndex((book) => id === book.id);
-  if (index === -1) {
+  const book = books.find((book) => id === book.id);
+
+  if (!book) {
     return res.status(404).json({ error: "Book not found." });
   }
 
   if (title !== undefined) {
-    books[index].title = title;
+    book.title = title;
   }
 
   if (author !== undefined) {
-    books[index].author = author;
+    book.author = author;
   }
 
-  res.status(200).json(books[index]);
+  res.status(200).json(book);
+  debounce(saveBooks);
+});
+
+app.patch("/books/:id", async (req, res) => {
+  const { id } = req.params;
+  const { title, author } = req.body;
+  const book = books.find((book) => id === book.id);
+
+  if (!book) {
+    return res.status(404).json({ error: "book not found" });
+  }
+
+  if (title !== undefined) {
+    book.title = title;
+  }
+
+  if (author !== undefined) {
+    book.author = author;
+  }
+
+  res.status(200).json(book);
   debounce(saveBooks);
 });
 

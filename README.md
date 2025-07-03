@@ -36,7 +36,7 @@ pnpm run start
 
 ```
 curl -X POST http://localhost:3000/books \
-  -H "Content-Type: application/json" \
+  -H "content-type: application/json" \
   -d '{"title": "book title", "author": "first and last name"}'
 ```
 
@@ -46,10 +46,18 @@ curl -X POST http://localhost:3000/books \
 curl -X DELETE http://localhost:3000/books/<book-id>
 ```
 
-#### Edit Book
+#### Replace Book
 
 ```
-curl -X PUT http://localhost:3000/books/<book-id>
-  -H "Content-Type: application/json" \
+curl -X PUT http://localhost:3000/books/<book-id> \
+  -H "content-type: application/json" \
   -d '{"title": "updated title", "author": "updated name"}'
+```
+
+# Edit Book
+
+```
+curl -X PATCH http://localhost:3000/books/<book-id> \
+  -H "content-type: application/json" \
+  -d '{"title": "updated title"}'
 ```
