@@ -54,7 +54,7 @@ curl -X PUT http://localhost:3000/books/<book-id> \
   -d '{"title": "updated title", "author": "updated name"}'
 ```
 
-# Edit Book
+#### Edit Book
 
 ```
 curl -X PATCH http://localhost:3000/books/<book-id> \
