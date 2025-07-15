@@ -1,143 +1,133 @@
-// load books from json files
-const fs = require("fs");
-const fsp = require("fs").promises;
-const path = require("path");
+import cors from "cors";
+import "dotenv/config";
+import express, { json } from "express";
+import pg from "pg";
 
-const filePath = path.join(__dirname, "books.json");
+const { Pool } = pg;
 
-let books = [];
+const pool = new Pool();
 
-if (fs.existsSync(filePath)) {
-  const data = fs.readFileSync(filePath, "utf8");
-  try {
-    books = JSON.parse(data);
-  } catch (error) {
-    console.error("Error parsing books.json", error);
-  }
-}
+pool.on("error", (err, client) => {
+  console.error("Unexpected error on idle client", err);
+  process.exit(-1);
+});
 
-let timeout;
-
-const debounce = (fn, delay = 500) => {
-  clearTimeout(timeout);
-  timeout = setTimeout(() => {
-    fn();
-  }, delay);
-};
-
-const saveBooks = async () => {
-  try {
-    await fsp.promises.writeFile(
-      filePath,
-      JSON.stringify(books, null, 2),
-      "utf-8",
-    );
-  } catch (error) {
-    console.error("Error saving books:", error);
-  }
-};
+const client = await pool.connect();
 
 // REST API
-const express = require("express");
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(
+  cors({
+    origin: "https://megancs601.github.io",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  }),
+);
+app.use(json());
 
 app.get("/", (req, res) => {
   res.send("📚 Book API is running. Use /books");
 });
 
-app.get("/books", (req, res) => {
-  res.json(books);
+app.get("/books", async (req, res) => {
+  const books = await client.query("SELECT * FROM books");
+  res.status(200).json(books.rows);
 });
 
 app.post("/books", async (req, res) => {
   const { title, author } = req.body;
   if (!title || !author) {
-    const error = "Title and the author are required.";
+    const error = "Both book title and author are required.";
     return res.status(400).json({ error });
   }
 
-  //check for duplicates first
-  const isDuplicate = books.some(
-    (book) =>
-      book.title.toLowerCase() === title.toLowerCase() &&
-      book.author.toLowerCase() === author.toLowerCase(),
-  );
-
-  if (isDuplicate) {
+  try {
+    const isDuplicate = await isDuplicateBook({ title, author });
+    if (isDuplicate) {
+      return res
+        .status(409)
+        .json({ error: "This book already exists in the library." });
+    }
+  } catch (e) {
     return res
-      .status(409)
-      .json({ error: "This book already exists in the library" });
+      .status(500)
+      .json({ error: "An internal server error occurred." });
   }
 
-  const newBook = {
-    id: Date.now().toString(),
-    title,
-    author,
+  const query = {
+    text: "INSERT INTO books(title, author) VALUES($1, $2)",
+    values: [title, author],
   };
 
-  books.push(newBook);
-  res.status(201).json(newBook);
-  debounce(saveBooks);
-});
-
-app.put("/books/:id", async (req, res) => {
-  const { id } = req.params;
-  const { title, author } = req.body;
-  const book = books.find((book) => id === book.id);
-
-  if (!book) {
-    return res.status(404).json({ error: "Book not found." });
-  }
-
-  if (title !== undefined) {
-    book.title = title;
-  }
-
-  if (author !== undefined) {
-    book.author = author;
-  }
-
-  res.status(200).json(book);
-  debounce(saveBooks);
+  await client.query(query);
+  res.status(201).end();
 });
 
 app.patch("/books/:id", async (req, res) => {
   const { id } = req.params;
   const { title, author } = req.body;
-  const book = books.find((book) => id === book.id);
 
-  if (!book) {
-    return res.status(404).json({ error: "book not found" });
+  if (!title || !author) {
+    const error = "Both book title and author are required.";
+    return res.status(400).json({ error });
   }
 
-  if (title !== undefined) {
-    book.title = title;
+  try {
+    const isDuplicate = await isDuplicateBook({ title, author });
+    if (isDuplicate) {
+      return res
+        .status(409)
+        .json({ error: "This book already exists in the library." });
+    }
+  } catch (e) {
+    return res
+      .status(500)
+      .json({ error: "An internal server error occurred." });
   }
 
-  if (author !== undefined) {
-    book.author = author;
+  const query = {
+    text: "UPDATE books SET title=$1, author=$2 WHERE id=$3",
+    values: [title, author, id],
+  };
+
+  const result = await client.query(query);
+  if (result.rowCount === 0) {
+    return res.status(404).json({ error: "Book not found" });
   }
 
-  res.status(200).json(book);
-  debounce(saveBooks);
+  res.status(204).end();
 });
 
 app.delete("/books/:id", async (req, res) => {
   const { id } = req.params;
-  const index = books.findIndex((book) => id === book.id);
-  if (index === -1) {
-    const error = "Book not found";
-    return res.status(404).json({ error });
+
+  const query = {
+    text: "DELETE FROM books WHERE id = $1",
+    values: [id],
+  };
+  const result = await client.query(query);
+  if (result.rowCount === 0) {
+    return res.status(404).json({ error: "book not found" });
   }
 
-  const deleted = books.splice(index, 1);
-  res.json(deleted);
-  debounce(saveBooks);
+  res.status(204).end();
 });
 
 app.listen(PORT, () => {
   console.log(`server running on localhost:${PORT}`);
 });
+
+const isDuplicateBook = async ({ title, author }) => {
+  try {
+    const query = {
+      text: "SELECT 1 FROM books WHERE LOWER(title) = $1 AND LOWER(author) = $2 LIMIT 1",
+      values: [title.toLowerCase(), author.toLowerCase()],
+    };
+    const result = await client.query(query);
+    return result.rowCount > 0;
+  } catch (e) {
+    console.error("Error checking for duplicate book:", e);
+    throw e;
+  }
+};
